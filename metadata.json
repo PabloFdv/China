@@ -1,0 +1,6 @@
+{
+  "name": "China Ball",
+  "description": "Jogo de futebol 2D estilo HaxBall e MamoBall com física autêntica, controle analógico e botão de chute, modo treino e partidas.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

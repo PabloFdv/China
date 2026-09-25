@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Futzin CF - Treino 1v1</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #17361f;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    }
+    #game-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      background-color: #17361f;
+    }
+    /* Placar Estilo Futzin */
+    .scoreboard {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      background: #151a21;
+      border: 1px solid rgba(0,0,0,0.5);
+      border-radius: 2px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+      z-index: 20;
+      overflow: hidden;
+    }
+    .flag {
+      width: 28px;
+      height: 28px;
+      display: flex;
+    }
+    .flag-left-yellow { width: 50%; height: 100%; background: #eab308; }
+    .flag-left-black { width: 50%; height: 100%; background: #000; }
+    .flag-right-blue { width: 50%; height: 100%; background: #1e5cd8; }
+    .flag-right-white { width: 50%; height: 100%; background: #fff; }
+    .scores {
+      padding: 0 14px;
+      font-size: 16px;
+      font-weight: 900;
+      color: #fff;
+      display: flex;
+      gap: 6px;
+    }
+    .ping-display {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+      pointer-events: none;
+      z-index: 20;
+    }
+    .top-actions {
+      position: fixed;
+      top: 10px;
+      right: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 20;
+    }
+    .btn-action {
+      background: rgba(0, 0, 0, 0.65);
+      color: #ffd700;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    /* Controles Touch */
+    .touch-controls {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 24px;
+      z-index: 30;
+      transition: all 0.2s ease;
+    }
+    .touch-controls.inverted {
+      flex-direction: row-reverse;
+    }
+    .joystick-zone {
+      pointer-events: auto;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.45);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .joystick-knob {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
+      border: 2px solid rgba(255,255,255,0.7);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      pointer-events: none;
+      position: absolute;
+    }
+    .kick-btn {
+      pointer-events: auto;
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e11d48, #9f1239);
+      border: 3px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: opacity 0.2s;
+    }
+    .kick-btn:active {
+      transform: scale(0.92);
+      filter: brightness(1.2);
+    }
+    /* Modal HUD */
+    .hud-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 16px;
+    }
+    .hud-modal.open {
+      display: flex;
+    }
+    .modal-box {
+      width: 100%;
+      max-width: 340px;
+      background: #0f172a;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 16px;
+      padding: 20px;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 10px;
+      font-weight: 900;
+      color: #ffd700;
+    }
+    .field-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .field-row input[type=range] {
+      width: 100%;
+      accent-color: #ffd700;
+    }
+    .layout-btns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .layout-btn {
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: #1e293b;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .layout-btn.active {
+      border-color: #ffd700;
+      background: rgba(234, 179, 8, 0.2);
+      color: #ffd700;
+    }
+    .btn-done {
+      width: 100%;
+      padding: 10px;
+      background: #ffd700;
+      color: #000;
+      font-weight: 900;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="game-canvas"></canvas>
+
+  <div class="scoreboard">
+    <div class="flag">
+      <div class="flag-left-yellow"></div>
+      <div class="flag-left-black"></div>
+    </div>
+    <div class="scores">
+      <span id="score-y">0</span>
+      <span style="color:#94a3b8">:</span>
+      <span id="score-b">0</span>
+    </div>
+    <div class="flag">
+      <div class="flag-right-blue"></div>
+      <div class="flag-right-white"></div>
+    </div>
+  </div>
+
+  <div class="ping-display">72ms</div>
+
+  <div class="top-actions">
+    <button class="btn-action" id="reset-btn">Reset Bola (R)</button>
+    <button class="btn-action" id="hud-btn" style="color:#38bdf8; border-color: rgba(56,189,248,0.4)">Trocar HUD</button>
+  </div>
+
+  <div class="touch-controls" id="touch-controls">
+    <div class="joystick-zone" id="joystick-zone">
+      <div class="joystick-knob" id="joystick-knob"></div>
+    </div>
+    <button class="kick-btn" id="kick-btn">CHUTE</button>
+  </div>
+
+  <!-- Modal Personalizar HUD -->
+  <div class="hud-modal" id="hud-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span>PERSONALIZAR HUD</span>
+        <span id="close-hud" style="cursor:pointer; font-size:18px;">&times;</span>
+      </div>
+
+      <div class="field-row">
+        <span>Posição dos Controles</span>
+        <div class="layout-btns">
+          <button class="layout-btn active" id="layout-default">Padrão</button>
+          <button class="layout-btn" id="layout-inverted">Invertido</button>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div style="display:flex; justify-content:space-between">
+          <span>Tamanho do Analógico</span>
+          <span id="joy-size-val" style="color:#ffd700">130px</span>
+        </div>
+        <input type="range" id="joy-size" min="100" max="180" value="130" />
+      </div>
+
+      <div class="field-row">
+        <div style="display:flex; justify-content:space-between">
+          <span>Tamanho do Botão Chute</span>
+          <span id="kick-size-val" style="color:#ffd700">82px</span>
+        </div>
+        <input type="range" id="kick-size" min="64" max="120" value="82" />
+      </div>
+
+      <div class="field-row">
+        <div style="display:flex; justify-content:space-between">
+          <span>Opacidade dos Botões</span>
+          <span id="opacity-val" style="color:#ffd700">90%</span>
+        </div>
+        <input type="range" id="hud-opacity" min="20" max="100" value="90" />
+      </div>
+
+      <button class="btn-done" id="done-hud">CONCLUÍDO</button>
+    </div>
+  </div>
+
+  <script>
+    // --- FÍSICA CANÔNICA DO HAXBALL / FUTZIN REFINADA (FLUIDEZ PURA E CONTROLE TOTAL) ---
+    const HAXBALL = {
+      field: { width: 840, height: 420, goalWidth: 140, goalDepth: 55, postRadius: 7 },
+      player: {
+        radius: 17,
+        mass: 2.2,
+        invMass: 1 / 2.2,
+        bCoef: 0.50,
+        maxSpeed: 3.75,
+        acceleration: 0.175,
+        kickingAcceleration: 0.11,
+        normalDamping: 0.966,
+        brakeDamping: 0.895,
+        counterBrakeFactor: 2.2,
+        minSpeedThreshold: 0.015,
+      },
+      ball: {
+        radius: 10.0,
+        mass: 1.0,
+        invMass: 1.0,
+        bCoef: 0.52,
+        maxSpeed: 7.8,
+        minSpeedThreshold: 0.020,
+        frictionHighSpeedDamping: 0.9935,
+        frictionMidSpeedDamping: 0.9880,
+        frictionLowSpeedDamping: 0.9720,
+        critSpeedHigh: 3.2,
+        critSpeedLow: 1.4,
+      },
+      kick: {
+        baseImpulse: 5.8,
+        playerVelocityContribution: 0.42,
+        analogBlendWeight: 0.35,
+        geometricNormalWeight: 0.65,
+        reachMargin: 6.5,
+        cooldownTicks: 7,
+        maxKickOutputSpeed: 7.8,
+      },
+      dribble: {
+        softContactVelocityLimit: 1.75,
+        softRestitution: 0.12,
+        tangentialGrip: 0.18,
+        penetrationRelaxation: 0.88,
+      },
+      wallBounce: {
+        baseNormalRestitution: 0.54,
+        tangentFriction: 0.915,
+        highSpeedAbsorbFactor: 0.045,
+        consecutiveLossFactor: 0.86,
+        playerWallRestitution: 0.20,
+        playerWallTangent: 0.88,
+      },
+      post: { bCoef: 0.52, radius: 7 }
+    };
+
+    function calculateBallFriction(speed) {
+      if (speed >= HAXBALL.ball.critSpeedHigh) {
+        return HAXBALL.ball.frictionHighSpeedDamping;
+      } else if (speed >= HAXBALL.ball.critSpeedLow) {
+        const t = (speed - HAXBALL.ball.critSpeedLow) / (HAXBALL.ball.critSpeedHigh - HAXBALL.ball.critSpeedLow);
+        return HAXBALL.ball.frictionLowSpeedDamping + t * (HAXBALL.ball.frictionHighSpeedDamping - HAXBALL.ball.frictionLowSpeedDamping);
+      } else {
+        const t = Math.max(0, speed / HAXBALL.ball.critSpeedLow);
+        return 0.942 + t * (HAXBALL.ball.frictionLowSpeedDamping - 0.942);
+      }
+    }
+
+    // --- MOTOR FÍSICO COM RESPOSTA DE IMPACTO E RESET COMPLETO DE GOL ---
+    class Engine {
+      constructor() {
+        this.player = { x: -120, y: 0, prevX: -120, prevY: 0, vx: 0, vy: 0, radius: HAXBALL.player.radius, invMass: HAXBALL.player.invMass, bCoef: HAXBALL.player.bCoef };
+        this.ball = { x: 0, y: 0, prevX: 0, prevY: 0, vx: 0, vy: 0, radius: HAXBALL.ball.radius, invMass: HAXBALL.ball.invMass, bCoef: HAXBALL.ball.bCoef };
+        this.walls = [];
+        this.posts = [];
+        this.scoreY = 0;
+        this.scoreB = 0;
+        this.goalMessage = '';
+        this.goalCooldownTicks = 0;
+        this.kickCooldown = 0;
+        this.isKicking = false;
+        this.buildStadium();
+      }
+
+      buildStadium() {
+        const FW = HAXBALL.field.width, FH = HAXBALL.field.height, GW = HAXBALL.field.goalWidth, GD = HAXBALL.field.goalDepth, PR = HAXBALL.field.postRadius;
+        const hw = FW / 2, hh = FH / 2;
+        this.walls = [];
+        this.posts = [];
+
+        this.walls.push({ x1: -hw, y1: -hh, x2: hw, y2: -hh });
+        this.walls.push({ x1: -hw, y1: hh, x2: hw, y2: hh });
+        this.walls.push({ x1: -hw, y1: -hh, x2: -hw, y2: -GW/2 });
+        this.walls.push({ x1: -hw, y1: GW/2, x2: -hw, y2: hh });
+        this.walls.push({ x1: hw, y1: -hh, x2: hw, y2: -GW/2 });
+        this.walls.push({ x1: hw, y1: GW/2, x2: hw, y2: hh });
+
+        this.walls.push({ x1: -hw, y1: -GW/2, x2: -hw-GD, y2: -GW/2, net: true });
+        this.walls.push({ x1: -hw, y1: GW/2, x2: -hw-GD, y2: GW/2, net: true });
+        this.walls.push({ x1: -hw-GD, y1: -GW/2, x2: -hw-GD, y2: GW/2, net: true });
+        this.walls.push({ x1: hw, y1: -GW/2, x2: hw+GD, y2: -GW/2, net: true });
+        this.walls.push({ x1: hw, y1: GW/2, x2: hw+GD, y2: GW/2, net: true });
+        this.walls.push({ x1: hw+GD, y1: -GW/2, x2: hw+GD, y2: GW/2, net: true });
+
+        const pB = HAXBALL.post.bCoef;
+        this.posts.push({ x: -hw, y: -GW/2, r: PR, bCoef: pB });
+        this.posts.push({ x: -hw, y: GW/2, r: PR, bCoef: pB });
+        this.posts.push({ x: hw, y: -GW/2, r: PR, bCoef: pB });
+        this.posts.push({ x: hw, y: GW/2, r: PR, bCoef: pB });
+      }
+
+      resetBall() {
+        this.ball.x = this.player.x + this.player.radius + this.ball.radius + 2;
+        this.ball.y = this.player.y;
+        this.ball.prevX = this.ball.x;
+        this.ball.prevY = this.ball.y;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
+      }
+
+      resetToKickoff() {
+        this.player.x = -120;
+        this.player.y = 0;
+        this.player.prevX = -120;
+        this.player.prevY = 0;
+        this.player.vx = 0;
+        this.player.vy = 0;
+        this.ball.x = 0;
+        this.ball.y = 0;
+        this.ball.prevX = 0;
+        this.ball.prevY = 0;
+        this.ball.vx = 0;
+        this.ball.vy = 0;
+        this.kickCooldown = 0;
+        this.isKicking = false;
+      }
+
+      getRenderPlayer(alpha = 1) {
+        return {
+          x: this.player.prevX + (this.player.x - this.player.prevX) * alpha,
+          y: this.player.prevY + (this.player.y - this.player.prevY) * alpha,
+        };
+      }
+
+      getRenderBall(alpha = 1) {
+        return {
+          x: this.ball.prevX + (this.ball.x - this.ball.prevX) * alpha,
+          y: this.ball.prevY + (this.ball.y - this.ball.prevY) * alpha,
+        };
+      }
+
+      tick(inputX, inputY, kickPressed) {
+        // Guarda coordenadas anteriores para interpolação 120 FPS
+        this.player.prevX = this.player.x;
+        this.player.prevY = this.player.y;
+        this.ball.prevX = this.ball.x;
+        this.ball.prevY = this.ball.y;
+
+        // Cooldown após gol e reinício automático no centro
+        if (this.goalCooldownTicks > 0) {
+          this.goalCooldownTicks--;
+          this.ball.vx *= 0.94;
+          this.ball.vy *= 0.94;
+          this.ball.x += this.ball.vx;
+          this.ball.y += this.ball.vy;
+          if (this.goalCooldownTicks === 0) {
+            this.goalMessage = '';
+            this.resetToKickoff();
+          }
+          return;
+        }
+
+        if (this.kickCooldown > 0) this.kickCooldown--;
+        this.isKicking = kickPressed;
+
+        const inLen = Math.hypot(inputX, inputY);
+        const hasInput = inLen > 0.05;
+
+        // 1. MOVIMENTAÇÃO DO JOGADOR COM PESO E FRENAGEM ATIVA
+        if (hasInput) {
+          const inDirX = inputX / inLen;
+          const inDirY = inputY / inLen;
+          const intensity = Math.min(1.0, inLen);
+
+          const pSpeed = Math.hypot(this.player.vx, this.player.vy);
+          let turnBrake = 1.0;
+          if (pSpeed > 0.1) {
+            const dot = (this.player.vx / pSpeed) * inDirX + (this.player.vy / pSpeed) * inDirY;
+            if (dot < 0) {
+              turnBrake = 1.0 + Math.abs(dot) * HAXBALL.player.counterBrakeFactor;
+            }
+          }
+
+          this.player.vx *= Math.pow(HAXBALL.player.normalDamping, turnBrake);
+          this.player.vy *= Math.pow(HAXBALL.player.normalDamping, turnBrake);
+
+          const acc = kickPressed ? HAXBALL.player.kickingAcceleration : HAXBALL.player.acceleration;
+          this.player.vx += inDirX * acc * intensity;
+          this.player.vy += inDirY * acc * intensity;
+
+          const spd = Math.hypot(this.player.vx, this.player.vy);
+          if (spd > HAXBALL.player.maxSpeed) {
+            this.player.vx = (this.player.vx / spd) * HAXBALL.player.maxSpeed;
+            this.player.vy = (this.player.vy / spd) * HAXBALL.player.maxSpeed;
+          }
+        } else {
+          this.player.vx *= HAXBALL.player.brakeDamping;
+          this.player.vy *= HAXBALL.player.brakeDamping;
+          if (Math.hypot(this.player.vx, this.player.vy) < HAXBALL.player.minSpeedThreshold) {
+            this.player.vx = 0;
+            this.player.vy = 0;
+          }
+        }
+
+        // 2. CHUTE VETORIAL COM ÂNGULO DE CONTATO E TRANSFERÊNCIA DE MOMENTUM
+        const dx = this.ball.x - this.player.x;
+        const dy = this.ball.y - this.player.y;
+        const dist = Math.hypot(dx, dy);
+        const reach = this.player.radius + this.ball.radius + HAXBALL.kick.reachMargin;
+
+        if (kickPressed && this.kickCooldown === 0 && dist <= reach) {
+          const geomNx = dist > 1e-6 ? dx / dist : 1;
+          const geomNy = dist > 1e-6 ? dy / dist : 0;
+          const geomTx = -geomNy;
+          const geomTy = geomNx;
+
+          const playerVn = this.player.vx * geomNx + this.player.vy * geomNy;
+          const playerVt = this.player.vx * geomTx + this.player.vy * geomTy;
+
+          let stickNx = geomNx;
+          let stickNy = geomNy;
+          if (hasInput) {
+            stickNx = inputX / inLen;
+            stickNy = inputY / inLen;
+          }
+
+          const blendX = geomNx * HAXBALL.kick.geometricNormalWeight + stickNx * HAXBALL.kick.analogBlendWeight;
+          const blendY = geomNy * HAXBALL.kick.geometricNormalWeight + stickNy * HAXBALL.kick.analogBlendWeight;
+          const blendLen = Math.hypot(blendX, blendY) || 1;
+          const kickDirX = blendX / blendLen;
+          const kickDirY = blendY / blendLen;
+
+          const baseForce = HAXBALL.kick.baseImpulse;
+          const forwardTransfer = Math.max(0, playerVn) * HAXBALL.kick.playerVelocityContribution;
+          const tangentialTransfer = playerVt * 0.35;
+
+          let outVx = kickDirX * (baseForce + forwardTransfer) + geomTx * tangentialTransfer + this.ball.vx * 0.12;
+          let outVy = kickDirY * (baseForce + forwardTransfer) + geomTy * tangentialTransfer + this.ball.vy * 0.12;
+
+          const outSpd = Math.hypot(outVx, outVy);
+          if (outSpd > HAXBALL.kick.maxKickOutputSpeed) {
+            outVx = (outVx / outSpd) * HAXBALL.kick.maxKickOutputSpeed;
+            outVy = (outVy / outSpd) * HAXBALL.kick.maxKickOutputSpeed;
+          }
+
+          this.ball.vx = outVx;
+          this.ball.vy = outVy;
+          this.kickCooldown = HAXBALL.kick.cooldownTicks;
+        }
+
+        // 3. ATRITO NÃO-LINEAR DA BOLA (DESLIZE EM ALTA, PARADA SUAVE EM BAIXA)
+        const bSpeedBefore = Math.hypot(this.ball.vx, this.ball.vy);
+        if (bSpeedBefore > 0) {
+          const friction = calculateBallFriction(bSpeedBefore);
+          this.ball.vx *= friction;
+          this.ball.vy *= friction;
+
+          const bSpeed = Math.hypot(this.ball.vx, this.ball.vy);
+          if (bSpeed < HAXBALL.ball.minSpeedThreshold) {
+            this.ball.vx = 0;
+            this.ball.vy = 0;
+          } else if (bSpeed > HAXBALL.ball.maxSpeed) {
+            this.ball.vx = (this.ball.vx / bSpeed) * HAXBALL.ball.maxSpeed;
+            this.ball.vy = (this.ball.vy / bSpeed) * HAXBALL.ball.maxSpeed;
+          }
+        }
+
+        // 4. ATUALIZAÇÃO DE COORDENADAS
+        this.player.x += this.player.vx;
+        this.player.y += this.player.vy;
+        this.ball.x += this.ball.vx;
+        this.ball.y += this.ball.vy;
+
+        // 5. RESOLUÇÃO DE COLISÃO JOGADOR X BOLA
+        this.resolvePlayerBall();
+
+        // 6. COLISÕES COM PAREDES E POSTES (TABELAS COM AMORTECIMENTO REALISTA)
+        for (const w of this.walls) {
+          this.resolveSegment(this.player, w, false);
+          this.resolveSegment(this.ball, w, true);
+        }
+        for (const p of this.posts) {
+          this.resolvePost(this.player, p);
+          this.resolvePost(this.ball, p);
+        }
+
+        this.checkGoal();
+      }
+
+      // AMORTECIMENTO REALISTA DO QUIQUE NA PAREDE
+      resolveSegment(disc, seg, isBall = false) {
+        const abx = seg.x2 - seg.x1;
+        const aby = seg.y2 - seg.y1;
+        const segLen = Math.hypot(abx, aby);
+        if (segLen === 0) return;
+        const apx = disc.x - seg.x1;
+        const apy = disc.y - seg.y1;
+        let t = (apx * abx + apy * aby) / (segLen * segLen);
+        t = Math.max(0, Math.min(1, t));
+
+        const cx = seg.x1 + abx * t;
+        const cy = seg.y1 + aby * t;
+        let dx = disc.x - cx;
+        let dy = disc.y - cy;
+        let dist = Math.hypot(dx, dy);
+        if (dist >= disc.radius) return;
+
+        let nx = dist < 1e-7 ? -aby / segLen : dx / dist;
+        let ny = dist < 1e-7 ? abx / segLen : dy / dist;
+
+        const pen = disc.radius - dist;
+        disc.x += nx * pen;
+        disc.y += ny * pen;
+
+        // Produto escalar com a normal da parede
+        const vDotN = disc.vx * nx + disc.vy * ny;
+
+        if (vDotN < 0) {
+          if (seg.net) {
+            disc.vx = (disc.vx - 1.25 * vDotN * nx) * 0.35;
+            disc.vy = (disc.vy - 1.25 * vDotN * ny) * 0.35;
+          } else {
+            // Decomposição ortogonal: normal e tangencial
+            const vtX = disc.vx - vDotN * nx;
+            const vtY = disc.vy - vDotN * ny;
+
+            // Amortecimento do quique na parede / tabela:
+            // A força do retorno é reduzida significativamente para a bola não voltar rápido demais
+            const restN = isBall ? HAXBALL.wallBounce.ballRestitution : HAXBALL.wallBounce.playerRestitution;
+            const frictT = isBall ? HAXBALL.wallBounce.tangentFriction : 0.85;
+
+            disc.vx = vtX * frictT - nx * (vDotN * restN);
+            disc.vy = vtY * frictT - ny * (vDotN * restN);
+          }
+        }
+      }
+
+      resolvePost(disc, post) {
+        let dx = disc.x - post.x;
+        let dy = disc.y - post.y;
+        let dist = Math.hypot(dx, dy);
+        const minDist = disc.radius + post.r;
+        if (dist >= minDist) return;
+
+        dx /= (dist || 1);
+        dy /= (dist || 1);
+        const pen = minDist - dist;
+        disc.x += dx * pen;
+        disc.y += dy * pen;
+
+        const vn = disc.vx * dx + disc.vy * dy;
+        if (vn < 0) {
+          const impulse = -(1 + disc.bCoef * post.bCoef) * vn;
+          disc.vx += dx * impulse;
+          disc.vy += dy * impulse;
+        }
+      }
+
+      // RESOLUÇÃO DE COLISÃO RESTRUTURADA: IMPULSO NORMALIZADO CONSISTENTE
+      resolvePlayerBall() {
+        const dx = this.ball.x - this.player.x;
+        const dy = this.ball.y - this.player.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = this.player.radius + this.ball.radius;
+        if (dist >= minDist) return;
+
+        let nx = dist < 1e-7 ? 1 : dx / dist;
+        let ny = dist < 1e-7 ? 0 : dy / dist;
+
+        const pen = minDist - dist;
+        const sum = this.player.invMass + this.ball.invMass;
+
+        this.player.x -= nx * (pen * (this.player.invMass / sum));
+        this.player.y -= ny * (pen * (this.player.invMass / sum));
+        this.ball.x += nx * (pen * (this.ball.invMass / sum));
+        this.ball.y += ny * (pen * (this.ball.invMass / sum));
+
+        const rvx = this.ball.vx - this.player.vx;
+        const rvy = this.ball.vy - this.player.vy;
+        const vn = rvx * nx + rvy * ny;
+
+        if (vn < 0) {
+          const relSpeed = -vn;
+          let bCoef = this.player.bCoef * this.ball.bCoef;
+          if (!this.isKicking && relSpeed < HAXBALL.dribble.softContactLimit) {
+            bCoef = HAXBALL.dribble.softRestitution;
+          }
+
+          const impulseN = (-(1 + bCoef) * vn) / sum;
+          this.player.vx -= nx * (impulseN * this.player.invMass);
+          this.player.vy -= ny * (impulseN * this.player.invMass);
+          this.ball.vx += nx * (impulseN * this.ball.invMass);
+          this.ball.vy += ny * (impulseN * this.ball.invMass);
+
+          if (!this.isKicking) {
+            const vtX = rvx - vn * nx;
+            const vtY = rvy - vn * ny;
+            this.ball.vx -= vtX * HAXBALL.dribble.tangentGrip;
+            this.ball.vy -= vtY * HAXBALL.dribble.tangentGrip;
+          }
+        }
+      }
+
+      checkGoal() {
+        if (this.goalCooldownTicks > 0) return;
+        const hw = HAXBALL.field.width / 2;
+        const gw2 = HAXBALL.field.goalWidth / 2;
+        if (Math.abs(this.ball.y) < gw2 - 2) {
+          if (this.ball.x < -hw) {
+            this.scoreB++;
+            this.goalMessage = 'GOAL!';
+            this.goalCooldownTicks = 90; // ~1.5 segundos
+            this.ball.vx = 3.2;
+          } else if (this.ball.x > hw) {
+            this.scoreY++;
+            this.goalMessage = 'GOAL!';
+            this.goalCooldownTicks = 90; // ~1.5 segundos
+            this.ball.vx = -3.2;
+          }
+        }
+      }
+    }
+
+    // --- RENDERIZADOR RESPONSIVO (TAMANHO VISUAL OTIMIZADO NO CELULAR) ---
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const engine = new Engine();
+
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function render(alpha = 1) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const FW = HAXBALL.field.width, FH = HAXBALL.field.height, GD = HAXBALL.field.goalDepth, GW = HAXBALL.field.goalWidth;
+      const hw = FW / 2, hh = FH / 2;
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#17361f';
+      ctx.fillRect(0, 0, w, h);
+
+      // Margem reduzida para dar mais zoom e visibilidade no celular
+      const margin = w < 768 ? 8 : 18;
+      const scale = Math.min((w - margin * 2) / (FW + GD * 2 + 10), (h - margin * 2) / (FH + 10));
+
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(scale, scale);
+
+      // Gramado
+      ctx.fillStyle = '#246b3b';
+      ctx.fillRect(-hw, -hh, FW, FH);
+
+      // Redes dos gols
+      const drawNet = (gx, gy, gw, gh) => {
+        ctx.fillStyle = 'rgba(255,255,255,0.08)';
+        ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.2;
+        for (let x = gx; x <= gx + gw; x += 8) {
+          ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x, gy + gh); ctx.stroke();
+        }
+        for (let y = gy; y <= gy + gh; y += 8) {
+          ctx.beginPath(); ctx.moveTo(gx, y); ctx.lineTo(gx + gw, y); ctx.stroke();
+        }
+      };
+      drawNet(-hw - GD, -GW / 2, GD, GW);
+      drawNet(hw, -GW / 2, GD, GW);
+
+      // Linhas do campo
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3.5;
+      ctx.strokeRect(-hw, -hh, FW, FH);
+
+      ctx.beginPath();
+      ctx.moveTo(0, -hh); ctx.lineTo(0, hh); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 76, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+
+      // Logo Central CF
+      ctx.save();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.font = '900 italic 78px sans-serif';
+      ctx.fillText('CF', 0, 0);
+      ctx.restore();
+
+      // Paredes dos gols
+      ctx.beginPath();
+      for (const seg of engine.walls) {
+        ctx.moveTo(seg.x1, seg.y1);
+        ctx.lineTo(seg.x2, seg.y2);
+      }
+      ctx.stroke();
+
+      // Postes
+      for (const p of engine.posts) {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.6; ctx.stroke();
+      }
+
+      // Bola interpolada
+      const b = engine.ball;
+      const rBall = engine.getRenderBall(alpha);
+      ctx.beginPath(); ctx.ellipse(rBall.x, rBall.y + 3.5, b.radius * 1.1, b.radius * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(rBall.x, rBall.y, b.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = '#000'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.beginPath(); ctx.arc(rBall.x, rBall.y, b.radius * 0.44, 0, Math.PI * 2); ctx.fillStyle = '#0f172a'; ctx.fill();
+
+      // Jogador Amarelo Ouro interpolado (Visível e nítido)
+      const p = engine.player;
+      const rPlayer = engine.getRenderPlayer(alpha);
+
+      if (engine.isKicking) {
+        ctx.beginPath(); ctx.arc(rPlayer.x, rPlayer.y, p.radius + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2.6; ctx.stroke();
+      }
+      ctx.beginPath(); ctx.ellipse(rPlayer.x, rPlayer.y + 5.0, p.radius * 1.15, p.radius * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(rPlayer.x, rPlayer.y, p.radius, 0, Math.PI * 2);
+      ctx.fillStyle = '#f4d025'; ctx.fill();
+      ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2.2; ctx.stroke();
+
+      // Gol Animação e Subtítulo de Reinício
+      if (engine.goalMessage) {
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = '900 italic 78px sans-serif';
+        ctx.fillStyle = '#ffdf20';
+        ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = 18;
+        ctx.fillText(engine.goalMessage, 0, -10);
+        ctx.strokeStyle = '#000000'; ctx.lineWidth = 4;
+        ctx.strokeText(engine.goalMessage, 0, -10);
+
+        ctx.font = '700 20px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowBlur = 8;
+        ctx.fillText('REINICIANDO NO CENTRO...', 0, 48);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // --- CONTROLES E LOOP ---
+    let inputVector = { x: 0, y: 0 };
+    let isKicking = false;
+
+    const jZone = document.getElementById('joystick-zone');
+    const jKnob = document.getElementById('joystick-knob');
+    let jActiveId = null;
+
+    function handleJoy(cx, cy) {
+      const rect = jZone.getBoundingClientRect();
+      const ox = rect.left + rect.width / 2;
+      const oy = rect.top + rect.height / 2;
+      const dx = cx - ox;
+      const dy = cy - oy;
+      const dist = Math.hypot(dx, dy);
+      const radius = (rect.width / 2) - 10;
+
+      if (dist > 3) {
+        const cl = Math.min(dist, radius);
+        const ang = Math.atan2(dy, dx);
+        const kx = Math.cos(ang) * cl;
+        const ky = Math.sin(ang) * cl;
+        jKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+        inputVector.x = Math.cos(ang) * (cl / radius);
+        inputVector.y = Math.sin(ang) * (cl / radius);
+      } else {
+        jKnob.style.transform = 'translate(0px, 0px)';
+        inputVector.x = 0; inputVector.y = 0;
+      }
+    }
+
+    jZone.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      jActiveId = e.pointerId;
+      jZone.setPointerCapture(e.pointerId);
+      handleJoy(e.clientX, e.clientY);
+    });
+    jZone.addEventListener('pointermove', e => {
+      if (jActiveId === e.pointerId) {
+        e.preventDefault();
+        handleJoy(e.clientX, e.clientY);
+      }
+    });
+    const stopJoy = e => {
+      if (jActiveId === e.pointerId) {
+        jActiveId = null;
+        jKnob.style.transform = 'translate(0px, 0px)';
+        inputVector.x = 0; inputVector.y = 0;
+      }
+    };
+    jZone.addEventListener('pointerup', stopJoy);
+    jZone.addEventListener('pointercancel', stopJoy);
+
+    const kBtn = document.getElementById('kick-btn');
+    kBtn.addEventListener('pointerdown', e => { e.preventDefault(); isKicking = true; });
+    kBtn.addEventListener('pointerup', e => { e.preventDefault(); isKicking = false; });
+    kBtn.addEventListener('pointercancel', e => { e.preventDefault(); isKicking = false; });
+
+    document.getElementById('reset-btn').addEventListener('click', () => engine.resetBall());
+
+    // Teclado
+    const keys = new Set();
+    window.addEventListener('keydown', e => {
+      keys.add(e.code);
+      if (e.code === 'KeyR') engine.resetBall();
+      updateKeys();
+    });
+    window.addEventListener('keyup', e => {
+      keys.delete(e.code);
+      updateKeys();
+    });
+
+    function updateKeys() {
+      let mx = 0, my = 0;
+      if (keys.has('KeyA') || keys.has('ArrowLeft')) mx -= 1;
+      if (keys.has('KeyD') || keys.has('ArrowRight')) mx += 1;
+      if (keys.has('KeyW') || keys.has('ArrowUp')) my -= 1;
+      if (keys.has('KeyS') || keys.has('ArrowDown')) my += 1;
+      if (mx !== 0 && my !== 0) { mx *= 0.7071; my *= 0.7071; }
+      if (jActiveId === null) {
+        inputVector.x = mx;
+        inputVector.y = my;
+      }
+      isKicking = keys.has('Space') || keys.has('KeyX');
+    }
+
+    // Modal HUD e Personalização
+    const hudModal = document.getElementById('hud-modal');
+    const touchControls = document.getElementById('touch-controls');
+    document.getElementById('hud-btn').addEventListener('click', () => hudModal.classList.add('open'));
+    document.getElementById('close-hud').addEventListener('click', () => hudModal.classList.remove('open'));
+    document.getElementById('done-hud').addEventListener('click', () => hudModal.classList.remove('open'));
+
+    const btnDef = document.getElementById('layout-default');
+    const btnInv = document.getElementById('layout-inverted');
+    btnDef.addEventListener('click', () => {
+      btnDef.classList.add('active');
+      btnInv.classList.remove('active');
+      touchControls.classList.remove('inverted');
+    });
+    btnInv.addEventListener('click', () => {
+      btnInv.classList.add('active');
+      btnDef.classList.remove('active');
+      touchControls.classList.add('inverted');
+    });
+
+    const joySizeInput = document.getElementById('joy-size');
+    joySizeInput.addEventListener('input', e => {
+      const s = e.target.value;
+      document.getElementById('joy-size-val').innerText = s + 'px';
+      jZone.style.width = s + 'px';
+      jZone.style.height = s + 'px';
+      jKnob.style.width = Math.round(s * 0.42) + 'px';
+      jKnob.style.height = Math.round(s * 0.42) + 'px';
+    });
+
+    const kickSizeInput = document.getElementById('kick-size');
+    kickSizeInput.addEventListener('input', e => {
+      const s = e.target.value;
+      document.getElementById('kick-size-val').innerText = s + 'px';
+      kBtn.style.width = s + 'px';
+      kBtn.style.height = s + 'px';
+      kBtn.style.fontSize = Math.round(s * 0.18) + 'px';
+    });
+
+    const opInput = document.getElementById('hud-opacity');
+    opInput.addEventListener('input', e => {
+      const v = e.target.value;
+      document.getElementById('opacity-val').innerText = v + '%';
+      jZone.style.opacity = v / 100;
+      kBtn.style.opacity = v / 100;
+    });
+
+    // Loop a 60 FPS
+    let lastTime = performance.now();
+    let accumulator = 0;
+    const TICK_TIME = 1000 / 60;
+
+    function gameLoop(now) {
+      let delta = now - lastTime;
+      lastTime = now;
+      if (delta > 100) delta = 100;
+      accumulator += delta;
+
+      let steps = 0;
+      while (accumulator >= TICK_TIME) {
+        engine.tick(inputVector.x, inputVector.y, isKicking);
+        accumulator -= TICK_TIME;
+        steps++;
+        if (steps > 5) {
+          accumulator = 0;
+          break;
+        }
+      }
+
+      const alpha = Math.min(1, Math.max(0, accumulator / TICK_TIME));
+      render(alpha);
+      document.getElementById('score-y').innerText = engine.scoreY;
+      document.getElementById('score-b').innerText = engine.scoreB;
+      requestAnimationFrame(gameLoop);
+    }
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
